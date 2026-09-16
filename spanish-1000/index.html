@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mil Palabras</title>
+<meta name="description" content="Spanish vocabulary trainer built on frequency order, spaced repetition and retrieval practice.">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇪🇸</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">mil</span>
+    <span class="name">Mil Palabras</span>
+    <span class="tag">1000 words, in the order that pays</span>
+  </div>
+  <nav class="tabs">
+    <button data-view="study" class="active">Study</button>
+    <button data-view="progress">Progress</button>
+    <button data-view="browse">Words</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+</header>
+
+<div id="sessionbar" class="sessionbar"></div>
+
+<main>
+  <section id="study"><div id="card"></div></section>
+  <section id="progress" class="hidden"></section>
+  <section id="browse" class="hidden"></section>
+  <section id="settings" class="hidden"></section>
+</main>
+
+<footer class="foot">
+  <p><b>How this works.</b> Words arrive in frequency order because coverage of
+  real text is wildly front-loaded: the first hundred lemmas carry more running
+  text than the next nine hundred put together. Each word is drilled by
+  retrieval, never by re-reading, and the schedule expands only as long as you
+  keep getting it right. Recognition unlocks production, production unlocks
+  sentences and audio &mdash; because being able to read a word and being able
+  to say it are different skills, trained in that order.</p>
+  <p class="dim">Coverage percentages are estimates interpolated from published
+  lemma-frequency data for large Spanish corpora. Everyday speech runs higher
+  than these figures, technical prose lower. Progress is stored in this
+  browser only.</p>
+</footer>
+
+<script src="js/data/words.js"></script>
+<script src="js/data/examples.js"></script>
+<script src="js/data/chunks.js"></script>
+<script src="js/srs.js"></script>
+<script src="js/coverage.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
