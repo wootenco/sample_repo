@@ -388,13 +388,25 @@ function showCard() {
   host.appendChild(box);
 }
 
+/* The distinct meanings inside a gloss, ignoring parentheticals:
+ * "to be (identity, essence)" -> ["to be"], "the; her, it" -> ["the","her","it"]. */
+function senses(gloss) {
+  return gloss.toLowerCase().replace(/\([^)]*\)/g, "")
+    .split(/[,;]/).map(s => s.trim()).filter(Boolean);
+}
+
 /* Distractors are drawn from the same part of speech and a nearby frequency
- * band, so a multiple-choice card cannot be solved by elimination. */
+ * band, so a card cannot be solved by elimination - but never from a word
+ * that SHARES a meaning with the answer. "el" and "la" are both "the", and
+ * ser and estar are both "to be": offering those side by side asks the
+ * learner to pick between two right answers. */
 function choiceOptions(card) {
   const w = word(card.item);
+  const mine = new Set(senses(w.gloss));
+  const clashes = g => senses(g).some(s => mine.has(s));
   const pool = WORDS
     .map((x, i) => ({ gloss: x[1], pos: x[2], rank: i + 1 }))
-    .filter(x => x.pos === w.pos && x.rank !== w.rank);
+    .filter(x => x.pos === w.pos && x.rank !== w.rank && !clashes(x.gloss));
   const near = pool.filter(x => Math.abs(x.rank - w.rank) <= 200);
   const src = near.length >= 3 ? near : pool;
   let picks = shuffle(src.slice()).slice(0, 3).map(x => x.gloss);
@@ -404,7 +416,7 @@ function choiceOptions(card) {
     // so the card never collapses to a two-way guess.
     const filler = shuffle(WORDS.map((x, i) => ({ gloss: x[1], rank: i + 1 }))
       .filter(x => x.rank !== w.rank && Math.abs(x.rank - w.rank) <= 300 &&
-                   x.gloss !== w.gloss && !picks.includes(x.gloss)));
+                   !clashes(x.gloss) && !picks.includes(x.gloss)));
     picks = picks.concat(filler.slice(0, 3 - picks.length).map(x => x.gloss));
   }
   return shuffle([w.gloss, ...picks]);
@@ -685,8 +697,9 @@ function renderBrowse(filter) {
         '<input id="q" type="search" placeholder="filter by Spanish or English…" value="' + esc(q) + '">' +
         '<span class="small dim">showing up to 400 of 1000</span>' +
       "</div>" +
-      '<table class="tbl browse"><thead><tr><th>#</th><th>Spanish</th><th>English</th>' +
-      "<th>Notes</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      '<div class="tablewrap"><table class="tbl browse"><thead><tr><th>#</th><th>Spanish</th>' +
+      "<th>English</th><th>Notes</th><th>Status</th></tr></thead><tbody>" + rows +
+      "</tbody></table></div>" +
     "</section>";
   const input = $("#q");
   input.oninput = () => { const v = input.value; renderBrowse(v); $("#q").focus(); $("#q").setSelectionRange(v.length, v.length); };
@@ -729,7 +742,8 @@ function renderSettings() {
         '<button class="ghost" onclick="document.getElementById(\'importfile\').click()">Import JSON</button>' +
         '<button class="ghost danger" onclick="resetAll()">Reset everything</button>' +
       "</div>" +
-      '<input type="file" id="importfile" accept="application/json" style="display:none">' +
+      '<input type="file" id="importfile" accept="application/json" hidden>' +
+      '<div id="exportout"></div>' +
     "</section>";
 
   $("#s-new").onchange = e => { s.newPerDay = +e.target.value; saveState(); };
@@ -756,13 +770,41 @@ function renderSettings() {
   };
 }
 
+/* Offers the file download, and always shows the JSON as selectable text as
+ * well: some embedded contexts block downloads a page starts itself, and a
+ * dead Export button is worse than no Export button. */
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "milpalabras-" + todayKey() + ".json";
-  a.click();
-  URL.revokeObjectURL(a.href);
+  const json = JSON.stringify(state, null, 2);
+  try {
+    const blob = new Blob([json], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "milpalabras-" + todayKey() + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { /* fall through to the copyable text below */ }
+
+  const host = $("#exportout");
+  if (!host) return;
+  host.innerHTML =
+    '<label for="exportjson">Your progress as JSON — copy this somewhere safe if ' +
+    "the download did not start.</label>" +
+    '<textarea id="exportjson" class="exportbox" readonly rows="6"></textarea>' +
+    '<div class="hintrow"><button class="ghost" id="copyjson">Copy to clipboard</button></div>';
+  const box = $("#exportjson");
+  box.value = json;
+  box.focus();
+  box.select();
+  $("#copyjson").onclick = async () => {
+    const btn = $("#copyjson");
+    try {
+      await navigator.clipboard.writeText(json);
+      btn.textContent = "Copied";
+    } catch (e) {
+      box.select();
+      btn.textContent = "Press Cmd/Ctrl+C to copy";
+    }
+  };
 }
 
 function resetAll() {
